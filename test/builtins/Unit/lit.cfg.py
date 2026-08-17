@@ -21,7 +21,7 @@ else:
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -104,10 +104,12 @@ else:
     if sys.platform in ["win32"] and execute_external:
         # Don't pass dosish path separator to msys bash.exe.
         base_lib = base_lib.replace("\\", "/")
-    if config.target_triple in ['xtensa-esp-elf', 'xtensa-esp-unknown-elf', 'riscv32-esp-elf', 'riscv32-esp-unknown-elf']:
-      config.substitutions.append( ("%librt ", "-Wl,--start-group," + base_lib + ',-lc,-lm,--end-group ') )
+    if config.host_os == "Haiku":
+        config.substitutions.append(("%librt ", base_lib + " -lroot "))
+    elif config.target_triple in ['xtensa-esp-elf', 'xtensa-esp-unknown-elf', 'riscv32-esp-elf', 'riscv32-esp-unknown-elf']:
+        config.substitutions.append( ("%librt ", "-Wl,--start-group," + base_lib + ',-lc,-lm,--end-group ') )
     else:
-      config.substitutions.append( ("%librt ", base_lib + ' -lc -lm ') )
+        config.substitutions.append( ("%librt ", base_lib + ' -lc -lm ') )
 
 builtins_build_crt = get_required_attr(config, "builtins_build_crt")
 if builtins_build_crt:
@@ -126,6 +128,9 @@ if builtins_build_crt:
     config.substitutions.append(("%crtn", get_library_path("crtn.o")))
 
     config.substitutions.append(("%libgcc", get_libgcc_file_name()))
+    config.substitutions.append(
+        ("%libc", "-lroot" if sys.platform.startswith("haiku") else "-lc")
+    )
 
     config.substitutions.append(
         ("%libstdcxx", "-l" + config.sanitizer_cxx_lib.lstrip("lib"))
